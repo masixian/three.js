@@ -38,7 +38,25 @@ THREE.ThreeMFLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 		loader.setResponseType( 'arraybuffer' );
 		loader.load( url, function ( buffer ) {
 
-			onLoad( scope.parse( buffer ) );
+			try {
+
+				onLoad( scope.parse( buffer ) );
+
+			} catch ( e ) {
+
+				if ( onError ) {
+
+					onError( e );
+
+				} else {
+
+					console.error( e );
+
+				}
+
+				scope.manager.itemError( url );
+
+			}
 
 		}, onProgress, onError );
 
@@ -70,7 +88,7 @@ THREE.ThreeMFLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 
 			try {
 
-				zip = new JSZip( data ); // eslint-disable-line no-undef
+				zip = new JSZip( data );
 
 			} catch ( e ) {
 
@@ -1068,6 +1086,7 @@ THREE.ThreeMFLoader.prototype = Object.assign( Object.create( THREE.Loader.proto
 							meshes.push( newMeshes[ j ] );
 
 						}
+
 						break;
 
 					case 'texture':

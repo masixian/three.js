@@ -36,7 +36,9 @@ function WebXRManager( renderer, gl ) {
 	cameraR.layers.enable( 2 );
 	cameraR.viewport = new Vector4();
 
-	var cameraVR = new ArrayCamera( [ cameraL, cameraR ] );
+	var cameras = [ cameraL, cameraR ];
+
+	var cameraVR = new ArrayCamera();
 	cameraVR.layers.enable( 1 );
 	cameraVR.layers.enable( 2 );
 
@@ -132,10 +134,9 @@ function WebXRManager( renderer, gl ) {
 
 		framebufferScaleFactor = value;
 
-		// Warn if function is used while presenting
-		if ( scope.isPresenting == true ) {
+		if ( scope.isPresenting === true ) {
 
-			console.warn( "WebXRManager: Cannot change framebuffer scale while presenting VR content" );
+			console.warn( 'THREE.WebXRManager: Cannot change framebuffer scale while presenting.' );
 
 		}
 
@@ -144,6 +145,12 @@ function WebXRManager( renderer, gl ) {
 	this.setReferenceSpaceType = function ( value ) {
 
 		referenceSpaceType = value;
+
+		if ( scope.isPresenting === true ) {
+
+			console.warn( 'THREE.WebXRManager: Cannot change reference space type while presenting.' );
+
+		}
 
 	};
 
@@ -363,7 +370,19 @@ function WebXRManager( renderer, gl ) {
 
 		}
 
-		setProjectionFromUnion( cameraVR, cameraL, cameraR );
+		// update projection matrix for proper view frustum culling
+
+		if ( cameras.length === 2 ) {
+
+			setProjectionFromUnion( cameraVR, cameraL, cameraR );
+
+		} else {
+
+			// assume single camera setup (AR)
+
+			cameraVR.projectionMatrix.copy( cameraL.projectionMatrix );
+
+		}
 
 		return cameraVR;
 
@@ -384,12 +403,23 @@ function WebXRManager( renderer, gl ) {
 
 			renderer.setFramebuffer( baseLayer.framebuffer );
 
+			var cameraVRNeedsUpdate = false;
+
+			// check if it's necessary to rebuild cameraVR's camera list
+
+			if ( views.length !== cameraVR.cameras.length ) {
+
+				cameraVR.cameras.length = 0;
+				cameraVRNeedsUpdate = true;
+
+			}
+
 			for ( var i = 0; i < views.length; i ++ ) {
 
 				var view = views[ i ];
 				var viewport = baseLayer.getViewport( view );
 
-				var camera = cameraVR.cameras[ i ];
+				var camera = cameras[ i ];
 				camera.matrix.fromArray( view.transform.matrix );
 				camera.projectionMatrix.fromArray( view.projectionMatrix );
 				camera.viewport.set( viewport.x, viewport.y, viewport.width, viewport.height );
@@ -397,6 +427,12 @@ function WebXRManager( renderer, gl ) {
 				if ( i === 0 ) {
 
 					cameraVR.matrix.copy( camera.matrix );
+
+				}
+
+				if ( cameraVRNeedsUpdate === true ) {
+
+					cameraVR.cameras.push( camera );
 
 				}
 
